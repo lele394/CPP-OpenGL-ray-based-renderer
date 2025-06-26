@@ -283,41 +283,41 @@ float voxelSDF(vec3 p) {
 
 vec2 sceneSDF(vec3 p) {
     // Sphere at center
-    // float sph = sdSphere(p - vec3(0.0, 0.5, 0.0), 0.5);
+    float sph = sdSphere(p - vec3(0.0, 0.5, 0.0), 0.5);
     
-    // // Box base/platform
-    // float box = sdBox(p - vec3(0.0, -1.25, 0.0), vec3(2.0, 0.25, 2.0));
+    // Box base/platform
+    float box = sdBox(p - vec3(0.0, -1.25, 0.0), vec3(2.0, 0.25, 2.0));
     
-    // // Torus above sphere
-    // float torus = sdTorus(p - vec3(0.0, 1.2, 0.0), vec2(0.6, 0.15));
+    // Torus above sphere
+    float torus = sdTorus(p - vec3(0.0, 1.2, 0.0), vec2(0.6, 0.15));
     
-    // // Three rounded boxes arranged like pillars
-    // float rbox1 = sdRoundedBox(p - vec3(-1.2, -0.25, 0.0), vec3(0.2, 1.0, 0.2), 0.1);
-    // float rbox2 = sdRoundedBox(p - vec3(1.2, -0.25, 0.0), vec3(0.2, 1.0, 0.2), 0.1);
-    // float rbox3 = sdRoundedBox(p - vec3(0.0, -0.25, -1.2), vec3(0.2, 1.0, 0.2), 0.1);
+    // Three rounded boxes arranged like pillars
+    float rbox1 = sdRoundedBox(p - vec3(-1.2, -0.25, 0.0), vec3(0.2, 1.0, 0.2), 0.1);
+    float rbox2 = sdRoundedBox(p - vec3(1.2, -0.25, 0.0), vec3(0.2, 1.0, 0.2), 0.1);
+    float rbox3 = sdRoundedBox(p - vec3(0.0, -0.25, -1.2), vec3(0.2, 1.0, 0.2), 0.1);
 
-    // // Capped cylinder in the back
-    // float capCyl = sdCappedCylinder(p - vec3(0.0, -0.25, 1.5), 1.0, 0.2);
+    // Capped cylinder in the back
+    float capCyl = sdCappedCylinder(p - vec3(0.0, -0.25, 1.5), 1.0, 0.2);
 
     // voxel
     // float voxel = voxelSDF(p - vec3(0.0, 2.0, 0.0));
 
     // Combine all with min() and encode ID
-    // float d = sph;
-    // float id = 1.0;
+    float d = sph;
+    float id = 1.0;
 
-    // if (box < d) { d = box; id = 2.0; }
-    // if (torus < d) { d = torus; id = 3.0; }
-    // if (rbox1 < d) { d = rbox1; id = 4.0; }
-    // if (rbox2 < d) { d = rbox2; id = 4.0; }
-    // if (rbox3 < d) { d = rbox3; id = 4.0; }
-    // if (capCyl < d) { d = capCyl; id = 5.0; }
+    if (box < d) { d = box; id = 2.0; }
+    if (torus < d) { d = torus; id = 3.0; }
+    if (rbox1 < d) { d = rbox1; id = 4.0; }
+    if (rbox2 < d) { d = rbox2; id = 4.0; }
+    if (rbox3 < d) { d = rbox3; id = 4.0; }
+    if (capCyl < d) { d = capCyl; id = 5.0; }
     // if (voxel < d) { d = voxel; id = 5.0; }
 
     // float d = mandelbulb(p*0.2);
-    float id = 1.0;
+    // float id = 1.0;
 
-    float d = sdSphere(p - vec3(0.0, 0.0, 0.0), 0.5);
+    // float d = sdSphere(p - vec3(0.0, 0.0, 0.0), 0.5);
 
     return vec2(d, id);
 }
@@ -445,7 +445,7 @@ void main() {
         color *= diffuse;
 
         // Optional: view surface normals
-        color = normal;
+        // color = normal;
     }
 
     finalColor = vec4(color, 1.0);
