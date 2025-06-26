@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/ShaderDemo.dir/main.cpp.o -o ShaderDemo  libglad.a -lglfw /usr/lib/x86_64-linux-gnu/libGL.so 
