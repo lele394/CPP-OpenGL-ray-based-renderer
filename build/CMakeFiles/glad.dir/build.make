@@ -69,28 +69,28 @@ include CMakeFiles/glad.dir/progress.make
 # Include the compile flags for this target's objects.
 include CMakeFiles/glad.dir/flags.make
 
-CMakeFiles/glad.dir/deps/glad/src/glad.c.o: CMakeFiles/glad.dir/flags.make
-CMakeFiles/glad.dir/deps/glad/src/glad.c.o: /home/leo/Desktop/voxel-cpp/deps/glad/src/glad.c
-CMakeFiles/glad.dir/deps/glad/src/glad.c.o: CMakeFiles/glad.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/leo/Desktop/voxel-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/glad.dir/deps/glad/src/glad.c.o"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/glad.dir/deps/glad/src/glad.c.o -MF CMakeFiles/glad.dir/deps/glad/src/glad.c.o.d -o CMakeFiles/glad.dir/deps/glad/src/glad.c.o -c /home/leo/Desktop/voxel-cpp/deps/glad/src/glad.c
+CMakeFiles/glad.dir/deps/glad/src/gl.c.o: CMakeFiles/glad.dir/flags.make
+CMakeFiles/glad.dir/deps/glad/src/gl.c.o: /home/leo/Desktop/voxel-cpp/deps/glad/src/gl.c
+CMakeFiles/glad.dir/deps/glad/src/gl.c.o: CMakeFiles/glad.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/leo/Desktop/voxel-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building C object CMakeFiles/glad.dir/deps/glad/src/gl.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/glad.dir/deps/glad/src/gl.c.o -MF CMakeFiles/glad.dir/deps/glad/src/gl.c.o.d -o CMakeFiles/glad.dir/deps/glad/src/gl.c.o -c /home/leo/Desktop/voxel-cpp/deps/glad/src/gl.c
 
-CMakeFiles/glad.dir/deps/glad/src/glad.c.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/glad.dir/deps/glad/src/glad.c.i"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/leo/Desktop/voxel-cpp/deps/glad/src/glad.c > CMakeFiles/glad.dir/deps/glad/src/glad.c.i
+CMakeFiles/glad.dir/deps/glad/src/gl.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/glad.dir/deps/glad/src/gl.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/leo/Desktop/voxel-cpp/deps/glad/src/gl.c > CMakeFiles/glad.dir/deps/glad/src/gl.c.i
 
-CMakeFiles/glad.dir/deps/glad/src/glad.c.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/glad.dir/deps/glad/src/glad.c.s"
-	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/leo/Desktop/voxel-cpp/deps/glad/src/glad.c -o CMakeFiles/glad.dir/deps/glad/src/glad.c.s
+CMakeFiles/glad.dir/deps/glad/src/gl.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/glad.dir/deps/glad/src/gl.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/leo/Desktop/voxel-cpp/deps/glad/src/gl.c -o CMakeFiles/glad.dir/deps/glad/src/gl.c.s
 
 # Object files for target glad
 glad_OBJECTS = \
-"CMakeFiles/glad.dir/deps/glad/src/glad.c.o"
+"CMakeFiles/glad.dir/deps/glad/src/gl.c.o"
 
 # External object files for target glad
 glad_EXTERNAL_OBJECTS =
 
-libglad.a: CMakeFiles/glad.dir/deps/glad/src/glad.c.o
+libglad.a: CMakeFiles/glad.dir/deps/glad/src/gl.c.o
 libglad.a: CMakeFiles/glad.dir/build.make
 libglad.a: CMakeFiles/glad.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/leo/Desktop/voxel-cpp/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking C static library libglad.a"

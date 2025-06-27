@@ -142,29 +142,29 @@ ShaderDemo/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/ShaderDemo.dir/build.make CMakeFiles/ShaderDemo.dir/build
 .PHONY : ShaderDemo/fast
 
-deps/glad/src/glad.o: deps/glad/src/glad.c.o
-.PHONY : deps/glad/src/glad.o
+deps/glad/src/gl.o: deps/glad/src/gl.c.o
+.PHONY : deps/glad/src/gl.o
 
 # target to build an object file
-deps/glad/src/glad.c.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/deps/glad/src/glad.c.o
-.PHONY : deps/glad/src/glad.c.o
+deps/glad/src/gl.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/deps/glad/src/gl.c.o
+.PHONY : deps/glad/src/gl.c.o
 
-deps/glad/src/glad.i: deps/glad/src/glad.c.i
-.PHONY : deps/glad/src/glad.i
+deps/glad/src/gl.i: deps/glad/src/gl.c.i
+.PHONY : deps/glad/src/gl.i
 
 # target to preprocess a source file
-deps/glad/src/glad.c.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/deps/glad/src/glad.c.i
-.PHONY : deps/glad/src/glad.c.i
+deps/glad/src/gl.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/deps/glad/src/gl.c.i
+.PHONY : deps/glad/src/gl.c.i
 
-deps/glad/src/glad.s: deps/glad/src/glad.c.s
-.PHONY : deps/glad/src/glad.s
+deps/glad/src/gl.s: deps/glad/src/gl.c.s
+.PHONY : deps/glad/src/gl.s
 
 # target to generate assembly for a file
-deps/glad/src/glad.c.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/deps/glad/src/glad.c.s
-.PHONY : deps/glad/src/glad.c.s
+deps/glad/src/gl.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/glad.dir/build.make CMakeFiles/glad.dir/deps/glad/src/gl.c.s
+.PHONY : deps/glad/src/gl.c.s
 
 main.o: main.cpp.o
 .PHONY : main.o
@@ -200,9 +200,9 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... ShaderDemo"
 	@echo "... glad"
-	@echo "... deps/glad/src/glad.o"
-	@echo "... deps/glad/src/glad.i"
-	@echo "... deps/glad/src/glad.s"
+	@echo "... deps/glad/src/gl.o"
+	@echo "... deps/glad/src/gl.i"
+	@echo "... deps/glad/src/gl.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"

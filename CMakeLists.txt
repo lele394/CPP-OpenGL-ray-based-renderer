@@ -9,7 +9,7 @@ find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 
 # Add GLAD (from source)
-add_library(glad STATIC deps/glad/src/glad.c)
+add_library(glad STATIC deps/glad/src/gl.c)
 target_include_directories(glad PUBLIC deps/glad/include)
 
 # Add executable

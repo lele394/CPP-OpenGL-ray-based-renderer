@@ -1,10 +1,13 @@
-#include <glad/glad.h>
+#include "glad/gl.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <vector>
+
+
 
 const int WIDTH = 1280, HEIGHT = 720;
 
@@ -45,12 +48,34 @@ float quad[] = {
 float cam_speed = 5.0f;
 float mouse_sensitivity = 0.003f;
 
+// ================== Voxel struct and values ============
+struct Voxel {
+    uint16_t material;   // 2 bytes for material ID (2^16 materials possible)
+    float flow[3];       // 12 bytes in case I add liquids later
+    uint8_t misc[4];     // 4 bytes for misc stuff, idk whet I'll need later
+};
+
+const int CHUNK_SIZE = 16;
+const int NUM_CHUNKS_X = 10, NUM_CHUNKS_Y = 12, NUM_CHUNKS_Z = 5;
+const int NUM_CHUNKS = NUM_CHUNKS_X * NUM_CHUNKS_Y * NUM_CHUNKS_Z;
+const int VOXELS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+const int VOXEL_SIZE = 20; // bytes
+const int TOTAL_VOXELS = NUM_CHUNKS * VOXELS_PER_CHUNK;
+const int SSBO_SIZE = TOTAL_VOXELS * VOXEL_SIZE;
+
+// ================== ! Voxel struct and values ============
+
+
+
+
 int main() {
     glfwInit();
     GLFWwindow* win = glfwCreateWindow(WIDTH, HEIGHT, "ShaderDemo", NULL, NULL);
     glfwMakeContextCurrent(win);
-    gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-
+    if (!gladLoadGL(glfwGetProcAddress)) {
+        std::cerr << "Failed to initialize GLAD\n";
+        return -1;
+    }
     glfwSetInputMode(win, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     GLuint vao, vbo;
@@ -77,6 +102,22 @@ int main() {
     double lastX = WIDTH / 2.0;
     double lastY = HEIGHT / 2.0;
     bool firstMouse = true;
+
+
+    // ======= voxel SSBO =========
+    GLuint voxelSSBO;
+    glGenBuffers(1, &voxelSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, voxelSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, SSBO_SIZE, nullptr, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, voxelSSBO); // Binding = 0
+
+
+
+
+
+
+
+
 
 
     while (!glfwWindowShouldClose(win)) {

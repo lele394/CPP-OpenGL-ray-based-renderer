@@ -1,6 +1,6 @@
 CMakeFiles/ShaderDemo.dir/main.cpp.o: \
  /home/leo/Desktop/voxel-cpp/main.cpp /usr/include/stdc-predef.h \
- /home/leo/Desktop/voxel-cpp/deps/glad/include/glad/glad.h \
+ /home/leo/Desktop/voxel-cpp/deps/glad/include/glad/gl.h \
  /home/leo/Desktop/voxel-cpp/deps/glad/include/KHR/khrplatform.h \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stdint.h /usr/include/stdint.h \
  /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
@@ -317,4 +317,8 @@ CMakeFiles/ShaderDemo.dir/main.cpp.o: \
  /usr/include/x86_64-linux-gnu/c++/13/bits/basic_file.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++io.h \
  /usr/include/c++/13/bits/fstream.tcc /usr/include/c++/13/iostream \
- /usr/include/c++/13/sstream /usr/include/c++/13/bits/sstream.tcc
+ /usr/include/c++/13/sstream /usr/include/c++/13/bits/sstream.tcc \
+ /usr/include/c++/13/vector /usr/include/c++/13/bits/stl_uninitialized.h \
+ /usr/include/c++/13/bits/stl_vector.h \
+ /usr/include/c++/13/bits/stl_bvector.h \
+ /usr/include/c++/13/bits/vector.tcc
