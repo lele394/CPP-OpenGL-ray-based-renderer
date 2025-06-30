@@ -28,6 +28,11 @@ GLuint compile_shader(const char* src, GLenum type) {
     return shader;
 }
 
+
+
+
+
+
 GLuint create_program(const char* vsrc, const char* fsrc) {
     GLuint vert = compile_shader(vsrc, GL_VERTEX_SHADER);
     GLuint frag = compile_shader(fsrc, GL_FRAGMENT_SHADER);
@@ -50,19 +55,23 @@ float mouse_sensitivity = 0.003f;
 
 // ================== Voxel struct and values ============
 struct Voxel {
-    uint16_t material;   // 2 bytes for material ID (2^16 materials possible)
-    float flow[3];       // 12 bytes in case I add liquids later
-    uint8_t misc[4];     // 4 bytes for misc stuff, idk whet I'll need later
+    uint32_t material;
 };
 
-const int CHUNK_SIZE = 16;
-const int NUM_CHUNKS_X = 10, NUM_CHUNKS_Y = 12, NUM_CHUNKS_Z = 5;
-const int NUM_CHUNKS = NUM_CHUNKS_X * NUM_CHUNKS_Y * NUM_CHUNKS_Z;
-const int VOXELS_PER_CHUNK = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
-const int VOXEL_SIZE = 20; // bytes
-const int TOTAL_VOXELS = NUM_CHUNKS * VOXELS_PER_CHUNK;
-const int SSBO_SIZE = TOTAL_VOXELS * VOXEL_SIZE;
+void loadChunkToSSBO(GLuint voxelSSBO, const char* filepath) {
+    std::ifstream in(filepath, std::ios::binary);
+    if (!in) {
+        throw std::runtime_error("Failed to open file");
+    }
 
+    std::vector<uint32_t> data(8 * 8 * 8);
+    in.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(uint32_t));
+    in.close();
+
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, voxelSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, voxelSSBO); // Binding 0
+}
 // ================== ! Voxel struct and values ============
 
 
@@ -104,13 +113,20 @@ int main() {
     bool firstMouse = true;
 
 
+
+
+
+
+
+
     // ======= voxel SSBO =========
     GLuint voxelSSBO;
     glGenBuffers(1, &voxelSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, voxelSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, SSBO_SIZE, nullptr, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, voxelSSBO); // Binding = 0
+    loadChunkToSSBO(voxelSSBO, "data.bin");
 
+    std::cout << " Voxel SSBO has been allocated and loaded" << std::endl;
+
+    // =========== ! voxel SSBO ============
 
 
 
@@ -123,6 +139,8 @@ int main() {
     while (!glfwWindowShouldClose(win)) {
 
         glfwPollEvents();
+
+        // std::cout << "Position : " << camPos.x << "  " << camPos.y << "  " << camPos.z << std::endl;
 
 
         double curTime = glfwGetTime();
@@ -164,7 +182,7 @@ int main() {
         camRot.x = glm::clamp(camRot.x, -glm::half_pi<float>() + 0.01f, glm::half_pi<float>() - 0.01f);
         // glfwSetCursorPos(win, WIDTH / 2, HEIGHT / 2);
         
-        std::cout << "Pitch (X): " << camRot.x << ", Yaw (Y): " << camRot.y << std::endl;
+        // std::cout << "Pitch (X): " << camRot.x << ", Yaw (Y): " << camRot.y << std::endl;
         // ============== !MOUSE
 
         glm::vec3 right(
@@ -185,6 +203,8 @@ int main() {
         if (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS) move += glm::vec3 (0, 1, 0);
         if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS) move -= glm::vec3 (0, 1, 0);
         if (glm::length(move) > 0) camPos += glm::normalize(move) * cam_speed * dt;
+
+        if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) return 0; // quit
 
         // ===================== ! I N P U T ===============================
 
