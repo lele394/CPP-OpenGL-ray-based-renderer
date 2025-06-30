@@ -19,7 +19,16 @@ const ivec3 CHUNK_SIZE = ivec3(8, 8, 8);
 const float MAX_DIST = 64.0;
 
 vec3 getVoxelColor(uint materialId) {
-    if (materialId == 1u) return vec3(1.0, 1.0, 0.0);
+    if (materialId == 1u) return vec3(1.0, 1.0, 0.0); // yellow
+    if (materialId == 2u) return vec3(0.0, 1.0, 0.0); // green
+    if (materialId == 3u) return vec3(0.0, 1.0, 1.0); // cyan
+    if (materialId == 4u) return vec3(1.0, 0.0, 1.0); // magenta
+    if (materialId == 5u) return vec3(1.0, 0.5, 0.0); // orange
+    if (materialId == 6u) return vec3(0.5, 0.0, 1.0); // purple
+    if (materialId == 7u) return vec3(0.0, 0.5, 1.0); // sky blue
+    if (materialId == 8u) return vec3(0.5, 1.0, 0.0); // lime green
+    if (materialId == 9u) return vec3(1.0, 0.0, 0.0); // red
+
     return vec3(0.2, 0.2, 0.2);
 }
 

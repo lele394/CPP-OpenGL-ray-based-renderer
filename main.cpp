@@ -50,7 +50,7 @@ float quad[] = {
     -1, -1, 1, 1, -1, 1,
 };
 
-float cam_speed = 5.0f;
+float cam_speed = 8.0f;
 float mouse_sensitivity = 0.003f;
 
 // ================== Voxel struct and values ============
@@ -196,13 +196,15 @@ int main() {
         // glm::vec3 up = glm::cross(right, forward);
 
         glm::vec3 move(0.0f);
+        float speed_multiplier = 1.0;
         if (glfwGetKey(win, GLFW_KEY_W) == GLFW_PRESS) move += glm::vec3 (forward[0], 0, forward[2]);
         if (glfwGetKey(win, GLFW_KEY_S) == GLFW_PRESS) move -= glm::vec3 (forward[0], 0, forward[2]);
         if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) move -= glm::vec3 (right[0], 0, right[2]);
         if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) move += glm::vec3 (right[0], 0, right[2]);
         if (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS) move += glm::vec3 (0, 1, 0);
+        if (glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed_multiplier = 3.5f;
         if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS) move -= glm::vec3 (0, 1, 0);
-        if (glm::length(move) > 0) camPos += glm::normalize(move) * cam_speed * dt;
+        if (glm::length(move) > 0) camPos += glm::normalize(move) * cam_speed * dt * speed_multiplier;
 
         if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) return 0; // quit
 

@@ -11,7 +11,14 @@ for corner in corners:
     array[corner] = 1
 
 # Set center
-array[4,4,4] = 1
+array[4,4,4] = 2
+array[4,4,3] = 3
+array[4,3,4] = 4
+array[4,3,3] = 5
+array[3,4,4] = 6
+array[3,4,3] = 7
+array[3,3,4] = 8
+array[3,3,3] = 9
 
 # Save as raw binary (no header)
 array.tofile("data.bin")
