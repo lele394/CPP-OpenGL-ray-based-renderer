@@ -13,7 +13,7 @@ const int WIDTH = 1280, HEIGHT = 720;
 // const int WIDTH = 1024, HEIGHT = 1080; // Cool dimension to use to display the world
 
 const int CHUNK_SIZE = 32;
-const glm::ivec3 WORLD_DIM = glm::ivec3(3, 2, 4);  // Wx, Wy, Wz
+const glm::ivec3 WORLD_DIM = glm::ivec3(62, 2, 62);  // Wx, Wy, Wz
 
 const size_t CHUNK_VOXELS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 const size_t TOTAL_CHUNKS = WORLD_DIM.x * WORLD_DIM.y * WORLD_DIM.z;

@@ -24,7 +24,7 @@ layout(std430, binding = 0) buffer VoxelData {
 
 const ivec3 CHUNK_SIZE = ivec3(32, 32, 32);
 const float MAX_DIST = 1000.0;
-const int MAX_STEPS = 256;
+const int MAX_STEPS = 3000;
 
 // HAHAHA WELL ILL CHANGE THAT
 const int NUM_COLORS = 40;
@@ -93,9 +93,6 @@ int floor_div(int a, int b) {
 
 int worldToIndex3D(ivec3 pos) {
 
-    // ivec3 chunkCoord = pos / (chunkSize+1);
-
-
     ivec3 chunkCoord = ivec3(
         floor_div(pos.x, chunkSize),
         floor_div(pos.y, chunkSize),
@@ -151,7 +148,7 @@ mat3 getRotationMatrix(vec3 angles) {
 
 
 
-bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor) {
+bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
     vec3 pos = floor(ro);
     vec3 deltaDist = abs(1.0 / rd);
     vec3 step = sign(rd);
@@ -174,6 +171,7 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor) {
         int idx = worldToIndex3D(ipos);
         if (idx >= 0 && voxels[idx].material != 0u) {
             hitColor = getVoxelColor(voxels[idx].material);
+            steps = i;
             return true;
         }
 
@@ -188,8 +186,10 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor) {
             pos.z += step.z;
         }
 
-        if (length(pos - ro) > MAX_DIST)
+        if (length(pos - ro) > MAX_DIST) {
+            steps = i;
             break;
+        }
     }
     return false;
 }
@@ -220,7 +220,8 @@ void main() {
     rd = rot * rd;
 
     vec3 color;
-    if (raymarch(ro, rd, color)) {
+    uint steps;
+    if (raymarch(ro, rd, color, steps)) {
         finalColor = vec4(color, 1.0);
     } else {
         color = rd.y < 0.0 ? vec3(135, 121, 100) / 255.0 : vec3(103, 159, 201) / 255.0;
@@ -228,6 +229,9 @@ void main() {
         finalColor = vec4(color, 1.0);
     }
 
+
+
+    // finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
 
     // Flattened 3D to 2D, loop through voxels world data. All chunks
     // uint x = uint(gl_FragCoord.x);
