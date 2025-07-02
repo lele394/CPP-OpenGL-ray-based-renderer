@@ -13,7 +13,7 @@ const int WIDTH = 1280, HEIGHT = 720;
 // const int WIDTH = 1024, HEIGHT = 1080; // Cool dimension to use to display the world
 
 const int CHUNK_SIZE = 32;
-const glm::ivec3 WORLD_DIM = glm::ivec3(62, 5, 62);  // Wx, Wy, Wz This is the world size  : 629,800,960 voxels
+const glm::ivec3 WORLD_DIM = glm::ivec3(3, 3, 3);  // Wx, Wy, Wz This is the world size  : 629,800,960 voxels
 
 const size_t CHUNK_VOXELS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 const size_t TOTAL_CHUNKS = WORLD_DIM.x * WORLD_DIM.y * WORLD_DIM.z;
@@ -80,7 +80,7 @@ struct Voxel {
 
 void loadChunkToMasterSSBO(GLuint ssbo, std::string filepath, int chunkIndex) {
     std::ifstream in(filepath, std::ios::binary);
-    if (!in) throw std::runtime_error("Failed to open chunk file");
+    if (!in) throw std::runtime_error("Failed to open chunk file : " + filepath);
 
     std::vector<uint32_t> data(CHUNK_VOXELS);
     in.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(uint32_t));
@@ -178,10 +178,16 @@ int main() {
     
         // pick a random file between 1 and 35
         // int randomFileId = distrib(gen);
-        int randomFileId = (x+y*WORLD_DIM.x+z*WORLD_DIM.y*WORLD_DIM.x)%35 + 1;
-        std::string filename = "../data/data-" + std::to_string(randomFileId) + ".bin";
+        // int randomFileId = (x+y*WORLD_DIM.x+z*WORLD_DIM.y*WORLD_DIM.x)%35 + 1;
+        // std::string filename = "../data/data-" + std::to_string(randomFileId) + ".bin";
+        // loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
+        // std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\tdata-"<<randomFileId<< std::endl;
+        
+
+        std::string filename = "../data/chunk-" + std::to_string(x) + "-" + std::to_string(y) + "-" + std::to_string(z) + ".bin";
         loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
-        std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\tdata-"<<randomFileId<< std::endl;
+        std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\t"<<filename<< std::endl;
+
 
     }
 

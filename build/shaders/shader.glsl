@@ -24,63 +24,44 @@ const ivec3 CHUNK_SIZE = ivec3(32, 32, 32);
 const float MAX_DIST = 1000.0;
 const int MAX_STEPS = 3000;
 
-// HAHAHA WELL ILL CHANGE THAT
-const int NUM_COLORS = 40;
 
-const vec3 voxelColors[NUM_COLORS] = vec3[NUM_COLORS](
-    vec3(1.0, 0.0, 0.0),    // 1 red
-    vec3(0.0, 1.0, 0.0),    // 2 green
-    vec3(0.0, 0.0, 1.0),    // 3 blue
-    vec3(1.0, 1.0, 0.0),    // 4 yellow
-    vec3(1.0, 0.0, 1.0),    // 5 magenta
-    vec3(0.0, 1.0, 1.0),    // 6 cyan
-    vec3(1.0, 0.5, 0.0),    // 7 orange
-    vec3(0.5, 0.0, 1.0),    // 8 purple
-    vec3(0.0, 0.5, 1.0),    // 9 sky blue
-    vec3(0.5, 1.0, 0.0),    // 10 lime green
 
-    vec3(0.8, 0.2, 0.2),    // 11
-    vec3(0.2, 0.8, 0.2),    // 12
-    vec3(0.2, 0.2, 0.8),    // 13
-    vec3(0.8, 0.8, 0.2),    // 14
-    vec3(0.8, 0.2, 0.8),    // 15
-    vec3(0.2, 0.8, 0.8),    // 16
-    vec3(1.0, 0.75, 0.25),  // 17
-    vec3(0.75, 0.25, 1.0),  // 18
-    vec3(0.25, 1.0, 0.75),  // 19
-    vec3(0.6, 0.4, 0.2),    // 20
 
-    vec3(0.4, 0.6, 0.2),    // 21
-    vec3(0.2, 0.4, 0.6),    // 22
-    vec3(0.6, 0.2, 0.4),    // 23
-    vec3(0.4, 0.2, 0.6),    // 24
-    vec3(0.2, 0.6, 0.4),    // 25
-    vec3(0.9, 0.1, 0.1),    // 26
-    vec3(0.1, 0.9, 0.1),    // 27
-    vec3(0.1, 0.1, 0.9),    // 28
-    vec3(0.9, 0.9, 0.1),    // 29
-    vec3(0.9, 0.1, 0.9),    // 30
+struct Material {
+    vec3 color;
+    float opacity;
+};
 
-    vec3(0.1, 0.9, 0.9),    // 31
-    vec3(0.5, 0.5, 0.5),    // 32
-    vec3(0.3, 0.3, 0.3),    // 33
-    vec3(0.7, 0.7, 0.7),    // 34
-    vec3(1.0, 0.6, 0.6),    // 35
-    vec3(0.6, 1.0, 0.6),    // 36
-    vec3(0.6, 0.6, 1.0),    // 37
-    vec3(1.0, 1.0, 0.5),    // 38
-    vec3(1.0, 0.5, 1.0),    // 39
-    vec3(0.5, 1.0, 1.0)     // 40
+
+
+const int NUM_MATERIALS = 10;
+
+const Material voxelMaterials[NUM_MATERIALS] = Material[NUM_MATERIALS](
+    Material(vec3(1.0, 0.0, 0.0), 0.05),   // red
+    Material(vec3(0.0, 0.0, 1.0), 0.05),   // blue
+    Material(vec3(0.0, 1.0, 0.0), 0.05),   // green
+    Material(vec3(1.0, 1.0, 0.0), 0.05),   // yellow
+    Material(vec3(1.0, 0.0, 1.0), 0.05),   // magenta
+    Material(vec3(0.0, 1.0, 1.0), 0.05),   // cyan
+    Material(vec3(1.0, 0.5, 0.0), 0.05),   // orange
+    Material(vec3(0.5, 0.0, 1.0), 0.05),   // purple
+    Material(vec3(0.0, 1.0, 0.5), 0.05),   // teal
+    Material(vec3(0.5, 0.5, 0.5), 0.05)    // gray
 );
 
-vec3 getVoxelColor(uint materialId) {
-    // IDs start at 1; array index at 0
-    if (materialId == 0u || materialId > uint(NUM_COLORS)) {
-        return vec3(0.2, 0.2, 0.2); // default gray
-    }
-    return voxelColors[int(materialId) - 1];
-}
 
+
+// For now AIR is defined here, ie the empty cell
+const Material AIR = Material(vec3(1.0, 1.0, 1.0), 0.0);
+Material getVoxelMaterial(uint materialId) {
+    if (materialId == 0u) {
+        return AIR;
+    }
+    if (materialId > uint(NUM_MATERIALS)) {
+        return Material(vec3(0.2, 0.2, 0.2), 1.0); // default gray
+    }
+    return voxelMaterials[int(materialId) - 1];
+}
 
 
 
@@ -161,26 +142,26 @@ bool intersectAABB(vec3 ro, vec3 rd, vec3 boxMin, vec3 boxMax, out float tNear, 
 
 
 
-bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
+// === Beer-Lambert absorption + background composition ===
+bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparency, out uint steps) {
     vec3 pos = floor(ro);
-
-    // Check if ray enters the world AABB
     float tNear, tFar;
     vec3 boxMin = vec3(0);
     vec3 boxMax = vec3(worldDim * chunkSize);
+
     if (!intersectAABB(ro, rd, boxMin, boxMax, tNear, tFar)) {
+        accumulatedColor = vec3(0.0);
+        transparency = 1.0;
         steps = 0;
         return false;
     }
 
-    // Start the ray directly inside the box if we're outside the world
     float tStart = max(tNear, 0.0);
     vec3 roStart = ro + rd * tStart;
     pos = floor(roStart);
     vec3 step = sign(rd);
     vec3 deltaDist = abs(1.0 / rd);
 
-    // Initialize side distances to next voxel boundaries
     vec3 sideDist;
     sideDist.x = (rd.x > 0.0)
         ? (pos.x + 1.0 - ro.x) * deltaDist.x
@@ -192,16 +173,35 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
         ? (pos.z + 1.0 - ro.z) * deltaDist.z
         : (ro.z - pos.z) * deltaDist.z;
 
+    accumulatedColor = vec3(0.0);
+    transparency = 1.0;
+
+    float last_t = tStart;
+
     for (int i = 0; i < MAX_STEPS; ++i) {
         ivec3 ipos = ivec3(pos);
         int idx = worldToIndex3D(ipos);
+
+        float t = min(min(sideDist.x, sideDist.y), sideDist.z);
+
         if (idx >= 0 && voxels[idx].material != 0u) {
-            hitColor = getVoxelColor(voxels[idx].material);
-            steps = i;
-            return true;
+            Material m = getVoxelMaterial(voxels[idx].material);
+
+            float opacity = m.opacity; // absorption coefficient
+            vec3 col = m.color;
+
+            float travel = t - last_t;
+            float absorb = exp(-opacity * travel);
+
+            accumulatedColor += transparency * col * (1.0 - absorb);
+            transparency *= absorb;
+
+            if (transparency < 0.01) {
+                steps = i;
+                break;
+            }
         }
 
-        // Determine which direction to step
         if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
             pos.x += step.x;
             sideDist.x += deltaDist.x;
@@ -213,16 +213,16 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
             sideDist.z += deltaDist.z;
         }
 
-        // Compute current distance along ray
-        float t = min(min(sideDist.x, sideDist.y), sideDist.z);
+        last_t = t;
 
-        // Stop if we've gone past exit point of AABB
         if (t > tFar) {
             steps = i;
             break;
         }
     }
-    return false;
+
+    steps = MAX_STEPS;
+    return true;
 }
 
 
@@ -251,14 +251,13 @@ void main() {
     rd = rot * rd;
 
     vec3 color;
+    float transparency;
     uint steps;
-    if (raymarch(ro, rd, color, steps)) {
-        finalColor = vec4(color, 1.0);
-    } else {
-        color = rd.y < 0.0 ? vec3(135, 121, 100) / 255.0 : vec3(103, 159, 201) / 255.0;
-        // color = vec3(0.0, 0.0, 0.0); // js want black rn
-        finalColor = vec4(color, 1.0);
-    }
+    raymarch(ro, rd, color, transparency, steps);
+
+    vec3 skyColor = rd.y < 0.0 ? vec3(135, 121, 100) / 255.0 : vec3(103, 159, 201) / 255.0;
+
+    finalColor = vec4(color + transparency * skyColor, 1.0);
 
 
     // This displays the number of steps/max steps
@@ -269,7 +268,7 @@ void main() {
     // uint y = uint(gl_FragCoord.y);
     // uint index = y * uint(resolution.x) + x;
     // // get voxel color
-    // finalColor = vec4(getVoxelColor(voxels[index].material), 1.0);
+    // finalColor = vec4(getVoxelMaterial(voxels[index].material).color, 1.0);
 
 
 }
