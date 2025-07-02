@@ -7,6 +7,13 @@ uniform vec3 camPos;
 uniform vec3 camRot;
 uniform float FOV;
 
+uniform int chunkSize;
+uniform ivec3 worldDim;
+
+const ivec3 worldAnchor = ivec3(0,0,0); // Will then make this move around with the camera. For now fix to 0,0,0 to keep it fixed
+
+
+
 struct Voxel {
     uint material;
 };
@@ -15,29 +22,104 @@ layout(std430, binding = 0) buffer VoxelData {
     Voxel voxels[];
 };
 
-const ivec3 CHUNK_SIZE = ivec3(8, 8, 8);
-const float MAX_DIST = 64.0;
+const ivec3 CHUNK_SIZE = ivec3(32, 32, 32);
+const float MAX_DIST = 1000.0;
+const int MAX_STEPS = 256;
+
+// HAHAHA WELL ILL CHANGE THAT
+const int NUM_COLORS = 40;
+
+const vec3 voxelColors[NUM_COLORS] = vec3[NUM_COLORS](
+    vec3(1.0, 0.0, 0.0),    // 1 red
+    vec3(0.0, 1.0, 0.0),    // 2 green
+    vec3(0.0, 0.0, 1.0),    // 3 blue
+    vec3(1.0, 1.0, 0.0),    // 4 yellow
+    vec3(1.0, 0.0, 1.0),    // 5 magenta
+    vec3(0.0, 1.0, 1.0),    // 6 cyan
+    vec3(1.0, 0.5, 0.0),    // 7 orange
+    vec3(0.5, 0.0, 1.0),    // 8 purple
+    vec3(0.0, 0.5, 1.0),    // 9 sky blue
+    vec3(0.5, 1.0, 0.0),    // 10 lime green
+
+    vec3(0.8, 0.2, 0.2),    // 11
+    vec3(0.2, 0.8, 0.2),    // 12
+    vec3(0.2, 0.2, 0.8),    // 13
+    vec3(0.8, 0.8, 0.2),    // 14
+    vec3(0.8, 0.2, 0.8),    // 15
+    vec3(0.2, 0.8, 0.8),    // 16
+    vec3(1.0, 0.75, 0.25),  // 17
+    vec3(0.75, 0.25, 1.0),  // 18
+    vec3(0.25, 1.0, 0.75),  // 19
+    vec3(0.6, 0.4, 0.2),    // 20
+
+    vec3(0.4, 0.6, 0.2),    // 21
+    vec3(0.2, 0.4, 0.6),    // 22
+    vec3(0.6, 0.2, 0.4),    // 23
+    vec3(0.4, 0.2, 0.6),    // 24
+    vec3(0.2, 0.6, 0.4),    // 25
+    vec3(0.9, 0.1, 0.1),    // 26
+    vec3(0.1, 0.9, 0.1),    // 27
+    vec3(0.1, 0.1, 0.9),    // 28
+    vec3(0.9, 0.9, 0.1),    // 29
+    vec3(0.9, 0.1, 0.9),    // 30
+
+    vec3(0.1, 0.9, 0.9),    // 31
+    vec3(0.5, 0.5, 0.5),    // 32
+    vec3(0.3, 0.3, 0.3),    // 33
+    vec3(0.7, 0.7, 0.7),    // 34
+    vec3(1.0, 0.6, 0.6),    // 35
+    vec3(0.6, 1.0, 0.6),    // 36
+    vec3(0.6, 0.6, 1.0),    // 37
+    vec3(1.0, 1.0, 0.5),    // 38
+    vec3(1.0, 0.5, 1.0),    // 39
+    vec3(0.5, 1.0, 1.0)     // 40
+);
 
 vec3 getVoxelColor(uint materialId) {
-    if (materialId == 1u) return vec3(1.0, 1.0, 0.0); // yellow
-    if (materialId == 2u) return vec3(0.0, 1.0, 0.0); // green
-    if (materialId == 3u) return vec3(0.0, 1.0, 1.0); // cyan
-    if (materialId == 4u) return vec3(1.0, 0.0, 1.0); // magenta
-    if (materialId == 5u) return vec3(1.0, 0.5, 0.0); // orange
-    if (materialId == 6u) return vec3(0.5, 0.0, 1.0); // purple
-    if (materialId == 7u) return vec3(0.0, 0.5, 1.0); // sky blue
-    if (materialId == 8u) return vec3(0.5, 1.0, 0.0); // lime green
-    if (materialId == 9u) return vec3(1.0, 0.0, 0.0); // red
-
-    return vec3(0.2, 0.2, 0.2);
+    // IDs start at 1; array index at 0
+    if (materialId == 0u || materialId > uint(NUM_COLORS)) {
+        return vec3(0.2, 0.2, 0.2); // default gray
+    }
+    return voxelColors[int(materialId) - 1];
 }
 
-int worldToIndex(ivec3 pos) {
-    if (any(lessThan(pos, ivec3(0))) || any(greaterThanEqual(pos, CHUNK_SIZE))) {
+
+
+
+
+int floor_div(int a, int b) {
+    return (a >= 0 ? a / b : ((a - b + 1) / b));
+}
+
+int worldToIndex3D(ivec3 pos) {
+
+    // ivec3 chunkCoord = pos / (chunkSize+1);
+
+
+    ivec3 chunkCoord = ivec3(
+        floor_div(pos.x, chunkSize),
+        floor_div(pos.y, chunkSize),
+        floor_div(pos.z, chunkSize)
+    );
+
+    if (any(lessThan(chunkCoord, ivec3(0))) || any(greaterThanEqual(chunkCoord, worldDim))) {
         return -1;
     }
-    return pos.z * CHUNK_SIZE.y * CHUNK_SIZE.x + pos.y * CHUNK_SIZE.x + pos.x;
+
+    ivec3 local = ivec3(
+        (pos.x % chunkSize + chunkSize) % chunkSize,
+        (pos.y % chunkSize + chunkSize) % chunkSize,
+        (pos.z % chunkSize + chunkSize) % chunkSize
+    );
+
+    int chunkIndex = chunkCoord.z * worldDim.y * worldDim.x + chunkCoord.y * worldDim.x + chunkCoord.x;
+    int localIndex = local.z * chunkSize * chunkSize + local.y * chunkSize + local.x;
+    return chunkIndex * chunkSize * chunkSize * chunkSize + localIndex;
 }
+
+
+
+
 
 mat3 getRotationMatrix(vec3 angles) {
     float cx = cos(angles.x), sx = sin(angles.x);
@@ -57,6 +139,18 @@ mat3 getRotationMatrix(vec3 angles) {
     return rz * ry * rx;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
 bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor) {
     vec3 pos = floor(ro);
     vec3 deltaDist = abs(1.0 / rd);
@@ -74,9 +168,10 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor) {
         : (ro.z - pos.z) * deltaDist.z;
 
 
-    for (int i = 0; i < 256; ++i) {
+    for (int i = 0; i < MAX_STEPS; ++i) {
         ivec3 ipos = ivec3(pos);
-        int idx = worldToIndex(ipos);
+        // int idx = worldToIndex(ipos); // Was used for single chunk
+        int idx = worldToIndex3D(ipos);
         if (idx >= 0 && voxels[idx].material != 0u) {
             hitColor = getVoxelColor(voxels[idx].material);
             return true;
@@ -99,6 +194,20 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor) {
     return false;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 void main() {
     vec2 uv = (gl_FragCoord.xy / resolution) * 2.0 - 1.0;
     uv.x *= resolution.x / resolution.y;
@@ -115,6 +224,17 @@ void main() {
         finalColor = vec4(color, 1.0);
     } else {
         color = rd.y < 0.0 ? vec3(135, 121, 100) / 255.0 : vec3(103, 159, 201) / 255.0;
+        // color = vec3(0.0, 0.0, 0.0); // js want black rn
         finalColor = vec4(color, 1.0);
     }
+
+
+    // Flattened 3D to 2D, loop through voxels world data. All chunks
+    // uint x = uint(gl_FragCoord.x);
+    // uint y = uint(gl_FragCoord.y);
+    // uint index = y * uint(resolution.x) + x;
+    // // get voxel color
+    // finalColor = vec4(getVoxelColor(voxels[index].material), 1.0);
+
+
 }

@@ -6,10 +6,29 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <random>
 
-
-
+// Screen size
 const int WIDTH = 1280, HEIGHT = 720;
+// const int WIDTH = 1024, HEIGHT = 1080; // Cool dimension to use to display the world
+
+const int CHUNK_SIZE = 32;
+const glm::ivec3 WORLD_DIM = glm::ivec3(3, 2, 4);  // Wx, Wy, Wz
+
+const size_t CHUNK_VOXELS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
+const size_t TOTAL_CHUNKS = WORLD_DIM.x * WORLD_DIM.y * WORLD_DIM.z;
+const size_t TOTAL_VOXELS = TOTAL_CHUNKS * CHUNK_VOXELS;
+
+
+
+// Setup random number generator
+// I just randomize the data I load lol
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_int_distribution<> distrib(1, 35); // generates numbers 1..35
+
+
+
 
 std::string load_file(const char* path) {
     std::ifstream file(path);
@@ -58,23 +77,30 @@ struct Voxel {
     uint32_t material;
 };
 
-void loadChunkToSSBO(GLuint voxelSSBO, const char* filepath) {
-    std::ifstream in(filepath, std::ios::binary);
-    if (!in) {
-        throw std::runtime_error("Failed to open file");
-    }
 
-    std::vector<uint32_t> data(8 * 8 * 8);
+void loadChunkToMasterSSBO(GLuint ssbo, std::string filepath, int chunkIndex) {
+    std::ifstream in(filepath, std::ios::binary);
+    if (!in) throw std::runtime_error("Failed to open chunk file");
+
+    std::vector<uint32_t> data(CHUNK_VOXELS);
     in.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(uint32_t));
     in.close();
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, voxelSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(uint32_t), data.data(), GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, voxelSSBO); // Binding 0
+    size_t offset = chunkIndex * CHUNK_VOXELS * sizeof(uint32_t);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+    glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, data.size() * sizeof(uint32_t), data.data());
 }
+
 // ================== ! Voxel struct and values ============
 
 
+
+
+// FPS counter : 
+const int FPS_SAMPLES = 100;
+float frameTimes[FPS_SAMPLES] = {0.0f}; // initialize with zeros
+int frameIndex = 0;
+bool filled = false;
 
 
 int main() {
@@ -103,6 +129,20 @@ int main() {
     GLint locCamRot = glGetUniformLocation(shader, "camRot");
     GLint locFOV = glGetUniformLocation(shader, "FOV");
 
+    // Chunk world stuff == Initialization
+    GLint chunkSizeLoc = glGetUniformLocation(shader, "chunkSize");
+    GLint worldDimLoc = glGetUniformLocation(shader, "worldDim");
+
+    glUseProgram(shader); // needed to start assigning values
+    glUniform1i(chunkSizeLoc, CHUNK_SIZE);
+    glUniform3i(worldDimLoc, WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
+
+
+
+
+
+
+
     glm::vec3 camPos(0, 1.0f, 3.0f);
     glm::vec2 camRot(0, 0);
     double lastTime = glfwGetTime();
@@ -120,15 +160,34 @@ int main() {
 
 
     // ======= voxel SSBO =========
-    GLuint voxelSSBO;
-    glGenBuffers(1, &voxelSSBO);
-    loadChunkToSSBO(voxelSSBO, "data.bin");
+    // GLuint voxelSSBO;
+    // glGenBuffers(1, &voxelSSBO);
+    // loadChunkToSSBO(voxelSSBO, "data.bin");
+
+    GLuint masterSSBO;
+    glGenBuffers(1, &masterSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, masterSSBO);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, TOTAL_VOXELS * sizeof(uint32_t), nullptr, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, masterSSBO);
+
+    // load all chunks to master SSBO ===== currently data.bin as debug
+    for (int z = 0; z < WORLD_DIM.z; ++z)
+    for (int y = 0; y < WORLD_DIM.y; ++y)
+    for (int x = 0; x < WORLD_DIM.x; ++x) {
+        int chunkIndex = z * WORLD_DIM.y * WORLD_DIM.x + y * WORLD_DIM.x + x;
+    
+        // pick a random file between 1 and 35
+        // int randomFileId = distrib(gen);
+        int randomFileId = (x+y*WORLD_DIM.x+z*WORLD_DIM.y*WORLD_DIM.x)%35 + 1;
+        std::string filename = "../data/data-" + std::to_string(randomFileId) + ".bin";
+        loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
+        std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\tdata-"<<randomFileId<< std::endl;
+
+    }
 
     std::cout << " Voxel SSBO has been allocated and loaded" << std::endl;
 
     // =========== ! voxel SSBO ============
-
-
 
 
 
@@ -148,6 +207,23 @@ int main() {
         lastTime = curTime;
 
 
+        // FPS counter
+        frameTimes[frameIndex] = dt;
+        frameIndex = (frameIndex + 1) % FPS_SAMPLES;
+        if (frameIndex == 0) filled = true;
+        float sum = 0.0f;
+        int count = filled ? FPS_SAMPLES : frameIndex;
+        
+        for (int i = 0; i < count; ++i) {
+            sum += frameTimes[i];
+        }
+        
+        float avgDt = sum / count;
+        float avgFps = 1.0f / avgDt;
+        
+        std::cout << "Avg FPS (last " << count << "): " << avgFps << "\r" << std::endl;
+        // std::cout.flush();
+        // !FPS counter
 
         // ===================== I N P U T ===============================
         
@@ -208,6 +284,10 @@ int main() {
 
         if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) return 0; // quit
 
+
+        std::cout <<  "Position : " << camPos.x << ", " << camPos.y << ", " << camPos.z << std::endl;
+        std::cout.flush();
+
         // ===================== ! I N P U T ===============================
 
 
@@ -219,6 +299,10 @@ int main() {
         glUniform3f(locCamRot, camRot.x, camRot.y, 0.0);
         glUniform1f(locFOV, 60.0f);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+
+
 
         glfwSwapBuffers(win);
     }
