@@ -37,16 +37,16 @@ struct Material {
 const int NUM_MATERIALS = 10;
 
 const Material voxelMaterials[NUM_MATERIALS] = Material[NUM_MATERIALS](
-    Material(vec3(1.0, 0.0, 0.0), 0.05),   // red
-    Material(vec3(0.0, 0.0, 1.0), 0.05),   // blue
-    Material(vec3(0.0, 1.0, 0.0), 0.05),   // green
-    Material(vec3(1.0, 1.0, 0.0), 0.05),   // yellow
-    Material(vec3(1.0, 0.0, 1.0), 0.05),   // magenta
-    Material(vec3(0.0, 1.0, 1.0), 0.05),   // cyan
-    Material(vec3(1.0, 0.5, 0.0), 0.05),   // orange
-    Material(vec3(0.5, 0.0, 1.0), 0.05),   // purple
-    Material(vec3(0.0, 1.0, 0.5), 0.05),   // teal
-    Material(vec3(0.5, 0.5, 0.5), 0.05)    // gray
+    Material(vec3(1.0, 0.0, 0.0), 1.0),   // red
+    Material(vec3(0.0, 0.0, 1.0), 1.0),   // blue
+    Material(vec3(0.0, 1.0, 0.0), 1.0),   // green
+    Material(vec3(1.0, 1.0, 0.0), 1.0),   // yellow
+    Material(vec3(1.0, 0.0, 1.0), 1.0),   // magenta
+    Material(vec3(0.0, 1.0, 1.0), 1.0),   // cyan
+    Material(vec3(1.0, 0.5, 0.0), 1.0),   // orange
+    Material(vec3(0.5, 0.0, 1.0), 1.0),   // purple
+    Material(vec3(0.0, 1.0, 0.5), 1.0),   // teal
+    Material(vec3(0.5, 0.5, 0.5), 1.0)    // gray
 );
 
 
@@ -190,15 +190,28 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
             float opacity = m.opacity; // absorption coefficient
             vec3 col = m.color;
 
+            // Fast branch when reaching opaque block
+            if (opacity >= 0.99) {
+                accumulatedColor += transparency * col;
+                transparency = 0.0;
+                steps = i;
+                return true;
+            }
+
             float travel = t - last_t;
             float absorb = exp(-opacity * travel);
 
-            accumulatedColor += transparency * col * (1.0 - absorb);
-            transparency *= absorb;
+            // classic alpha blend
+            accumulatedColor += transparency * col * opacity;
+            transparency *= (1.0 - opacity);
 
-            if (transparency < 0.01) {
+            // Beer-Lambert physically accurate method (costly)
+            // accumulatedColor += transparency * col * (1.0 - absorb);
+            // transparency *= absorb;
+
+            if (transparency < 0.1) {
                 steps = i;
-                break;
+                return true;
             }
         }
 
@@ -217,12 +230,11 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
 
         if (t > tFar) {
             steps = i;
-            break;
+            return true;
         }
     }
 
-    steps = MAX_STEPS;
-    return true;
+    return false;
 }
 
 
@@ -261,7 +273,7 @@ void main() {
 
 
     // This displays the number of steps/max steps
-    // finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
+    finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
 
     // Flattened 3D to 2D, loop through voxels world data. All chunks
     // uint x = uint(gl_FragCoord.x);

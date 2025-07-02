@@ -129,5 +129,5 @@ def generate_sphere_random(size=8, sphere_radius=2.5, material=2):
 
 
 sph = generate_sphere_random(100, 50)
-sph = generate_sphere(100, 50)
+# sph = generate_sphere(100, 50)
 convert_and_save_chunks(sph, 32)
