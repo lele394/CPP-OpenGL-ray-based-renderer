@@ -13,7 +13,7 @@ const int WIDTH = 1280, HEIGHT = 720;
 // const int WIDTH = 1024, HEIGHT = 1080; // Cool dimension to use to display the world
 
 const int CHUNK_SIZE = 32;
-const glm::ivec3 WORLD_DIM = glm::ivec3(62, 2, 62);  // Wx, Wy, Wz
+const glm::ivec3 WORLD_DIM = glm::ivec3(2, 2, 2);  // Wx, Wy, Wz
 
 const size_t CHUNK_VOXELS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 const size_t TOTAL_CHUNKS = WORLD_DIM.x * WORLD_DIM.y * WORLD_DIM.z;
@@ -221,8 +221,8 @@ int main() {
         float avgDt = sum / count;
         float avgFps = 1.0f / avgDt;
         
-        std::cout << "Avg FPS (last " << count << "): " << avgFps << "\r" << std::endl;
-        // std::cout.flush();
+        std::cout << "Avg FPS (last " << count << "): " << avgFps << "\r" ;
+        std::cout.flush();
         // !FPS counter
 
         // ===================== I N P U T ===============================
@@ -285,8 +285,8 @@ int main() {
         if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) return 0; // quit
 
 
-        std::cout <<  "Position : " << camPos.x << ", " << camPos.y << ", " << camPos.z << std::endl;
-        std::cout.flush();
+        // std::cout <<  "Position : " << camPos.x << ", " << camPos.y << ", " << camPos.z << std::endl;
+        // std::cout.flush();
 
         // ===================== ! I N P U T ===============================
 

@@ -10,8 +10,6 @@ uniform float FOV;
 uniform int chunkSize;
 uniform ivec3 worldDim;
 
-const ivec3 worldAnchor = ivec3(0,0,0); // Will then make this move around with the camera. For now fix to 0,0,0 to keep it fixed
-
 
 
 struct Voxel {
@@ -143,7 +141,21 @@ mat3 getRotationMatrix(vec3 angles) {
 
 
 
+bool intersectAABB(vec3 ro, vec3 rd, vec3 boxMin, vec3 boxMax, out float tNear, out float tFar) {
+    // Used to check if ray will collide with world currently described
+    vec3 invDir = 1.0 / rd;
 
+    vec3 t0s = (boxMin - ro) * invDir;
+    vec3 t1s = (boxMax - ro) * invDir;
+
+    vec3 tsmaller = min(t0s, t1s);
+    vec3 tbigger  = max(t0s, t1s);
+
+    tNear = max(max(tsmaller.x, tsmaller.y), tsmaller.z);
+    tFar  = min(min(tbigger.x, tbigger.y), tbigger.z);
+
+    return tFar >= max(tNear, 0.0);
+}
 
 
 
@@ -152,7 +164,26 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
     vec3 pos = floor(ro);
     vec3 deltaDist = abs(1.0 / rd);
     vec3 step = sign(rd);
+
+
+
+
+
+    // Check if it at least will enter the world
+    float tNear, tFar;
+    // for AABB collision:
+    vec3 boxMin = vec3(0);
+    vec3 boxMax = vec3(worldDim * chunkSize);
+    if (!intersectAABB(ro, rd, boxMin, boxMax, tNear, tFar)) {
+        steps=0;
+        return false; // immediately exit, ray misses the world
+    }
     
+
+
+
+
+
     vec3 sideDist;
     sideDist.x = (rd.x > 0.0)
         ? (pos.x + 1.0 - ro.x) * deltaDist.x
@@ -231,7 +262,7 @@ void main() {
 
 
 
-    // finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
+    finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
 
     // Flattened 3D to 2D, loop through voxels world data. All chunks
     // uint x = uint(gl_FragCoord.x);
