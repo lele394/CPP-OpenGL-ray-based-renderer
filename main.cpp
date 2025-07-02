@@ -13,7 +13,7 @@ const int WIDTH = 1280, HEIGHT = 720;
 // const int WIDTH = 1024, HEIGHT = 1080; // Cool dimension to use to display the world
 
 const int CHUNK_SIZE = 32;
-const glm::ivec3 WORLD_DIM = glm::ivec3(2, 2, 2);  // Wx, Wy, Wz
+const glm::ivec3 WORLD_DIM = glm::ivec3(62, 5, 62);  // Wx, Wy, Wz This is the world size  : 629,800,960 voxels
 
 const size_t CHUNK_VOXELS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 const size_t TOTAL_CHUNKS = WORLD_DIM.x * WORLD_DIM.y * WORLD_DIM.z;

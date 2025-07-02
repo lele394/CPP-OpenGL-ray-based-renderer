@@ -154,36 +154,33 @@ bool intersectAABB(vec3 ro, vec3 rd, vec3 boxMin, vec3 boxMax, out float tNear, 
     tNear = max(max(tsmaller.x, tsmaller.y), tsmaller.z);
     tFar  = min(min(tbigger.x, tbigger.y), tbigger.z);
 
-    return tFar >= max(tNear, 0.0);
+    bool result =  tFar >= max(tNear, 0.0);
+    tFar = tFar + 0.001; // SOOOOO I need to add epsilon or there's a conflict in the outbound check that gives me a visual glitch
+    return result;
 }
-
 
 
 
 bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
     vec3 pos = floor(ro);
-    vec3 deltaDist = abs(1.0 / rd);
-    vec3 step = sign(rd);
 
-
-
-
-
-    // Check if it at least will enter the world
+    // Check if ray enters the world AABB
     float tNear, tFar;
-    // for AABB collision:
     vec3 boxMin = vec3(0);
     vec3 boxMax = vec3(worldDim * chunkSize);
     if (!intersectAABB(ro, rd, boxMin, boxMax, tNear, tFar)) {
-        steps=0;
-        return false; // immediately exit, ray misses the world
+        steps = 0;
+        return false;
     }
-    
 
+    // Start the ray directly inside the box if we're outside the world
+    float tStart = max(tNear, 0.0);
+    vec3 roStart = ro + rd * tStart;
+    pos = floor(roStart);
+    vec3 step = sign(rd);
+    vec3 deltaDist = abs(1.0 / rd);
 
-
-
-
+    // Initialize side distances to next voxel boundaries
     vec3 sideDist;
     sideDist.x = (rd.x > 0.0)
         ? (pos.x + 1.0 - ro.x) * deltaDist.x
@@ -195,10 +192,8 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
         ? (pos.z + 1.0 - ro.z) * deltaDist.z
         : (ro.z - pos.z) * deltaDist.z;
 
-
     for (int i = 0; i < MAX_STEPS; ++i) {
         ivec3 ipos = ivec3(pos);
-        // int idx = worldToIndex(ipos); // Was used for single chunk
         int idx = worldToIndex3D(ipos);
         if (idx >= 0 && voxels[idx].material != 0u) {
             hitColor = getVoxelColor(voxels[idx].material);
@@ -206,18 +201,23 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 hitColor, out uint steps) {
             return true;
         }
 
+        // Determine which direction to step
         if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
-            sideDist.x += deltaDist.x;
             pos.x += step.x;
+            sideDist.x += deltaDist.x;
         } else if (sideDist.y < sideDist.z) {
-            sideDist.y += deltaDist.y;
             pos.y += step.y;
+            sideDist.y += deltaDist.y;
         } else {
-            sideDist.z += deltaDist.z;
             pos.z += step.z;
+            sideDist.z += deltaDist.z;
         }
 
-        if (length(pos - ro) > MAX_DIST) {
+        // Compute current distance along ray
+        float t = min(min(sideDist.x, sideDist.y), sideDist.z);
+
+        // Stop if we've gone past exit point of AABB
+        if (t > tFar) {
             steps = i;
             break;
         }
@@ -261,8 +261,8 @@ void main() {
     }
 
 
-
-    finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
+    // This displays the number of steps/max steps
+    // finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
 
     // Flattened 3D to 2D, loop through voxels world data. All chunks
     // uint x = uint(gl_FragCoord.x);
@@ -273,3 +273,7 @@ void main() {
 
 
 }
+
+
+// pretty consisten 50+ FPS on RTX 4060, and 25+ on iGPU
+// Not too bad for my use case. I will start using some new methods later. Also...
