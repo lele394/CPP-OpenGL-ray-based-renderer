@@ -9,7 +9,7 @@ mkdir build/shaders
 # Copy shaders
 cp ./shader.glsl ./build/shaders/shader.glsl
 cp ./vertex.glsl ./build/shaders/vertex.glsl
-cp ./world_gen.glsl ./build/shaders/world_gen.glsl
+cp ./voxel.glsl ./build/shaders/voxel.glsl
 
 # copy test voxel data
 # python test_data.py

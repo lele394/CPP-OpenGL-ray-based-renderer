@@ -13,7 +13,7 @@ const int WIDTH = 1280, HEIGHT = 720;
 // const int WIDTH = 1024, HEIGHT = 1080; // Cool dimension to use to display the world
 
 const int CHUNK_SIZE = 32;
-const glm::ivec3 WORLD_DIM = glm::ivec3(3, 3, 3);  // Wx, Wy, Wz This is the world size  : 629,800,960 voxels
+const glm::ivec3 WORLD_DIM = glm::ivec3(16, 2, 16);  // Wx, Wy, Wz
 
 const size_t CHUNK_VOXELS = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 const size_t TOTAL_CHUNKS = WORLD_DIM.x * WORLD_DIM.y * WORLD_DIM.z;
@@ -48,7 +48,55 @@ GLuint compile_shader(const char* src, GLenum type) {
 }
 
 
+GLuint compileComputeShader(const std::string& filename) {
+    // === Read shader source from file ===
+    std::ifstream in(filename);
+    if (!in.is_open()) {
+        throw std::runtime_error("Failed to open compute shader file: " + filename);
+    }
+    std::stringstream buffer;
+    buffer << in.rdbuf();
+    std::string sourceStr = buffer.str();
+    const char* source = sourceStr.c_str();
 
+    // === Create and compile shader ===
+    GLuint shader = glCreateShader(GL_COMPUTE_SHADER);
+    glShaderSource(shader, 1, &source, nullptr);
+    glCompileShader(shader);
+
+    // === Check compile errors ===
+    GLint success;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
+    if (!success) {
+        GLint logLength;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+        std::vector<char> infoLog(logLength);
+        glGetShaderInfoLog(shader, logLength, nullptr, infoLog.data());
+        std::cerr << "Compute Shader compilation failed:\n" << infoLog.data() << std::endl;
+        throw std::runtime_error("Compute Shader compilation failed.");
+    }
+
+    // === Create program and link ===
+    GLuint program = glCreateProgram();
+    glAttachShader(program, shader);
+    glLinkProgram(program);
+
+    // === Check linking errors ===
+    glGetProgramiv(program, GL_LINK_STATUS, &success);
+    if (!success) {
+        GLint logLength;
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLength);
+        std::vector<char> infoLog(logLength);
+        glGetProgramInfoLog(program, logLength, nullptr, infoLog.data());
+        std::cerr << "Compute Shader linking failed:\n" << infoLog.data() << std::endl;
+        throw std::runtime_error("Compute Shader linking failed.");
+    }
+
+    // === Clean up ===
+    glDeleteShader(shader);
+
+    return program;
+}
 
 
 
@@ -133,6 +181,11 @@ int main() {
     GLint chunkSizeLoc = glGetUniformLocation(shader, "chunkSize");
     GLint worldDimLoc = glGetUniformLocation(shader, "worldDim");
 
+    // Visual debug cycler
+    int RENDER_DEBUG = 1;
+    GLint RENDER_DEBUGLoc = glGetUniformLocation(shader, "RENDER_DEBUG");
+    glUniform1i(RENDER_DEBUGLoc, RENDER_DEBUG);
+
     glUseProgram(shader); // needed to start assigning values
     glUniform1i(chunkSizeLoc, CHUNK_SIZE);
     glUniform3i(worldDimLoc, WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
@@ -160,37 +213,36 @@ int main() {
 
 
     // ======= voxel SSBO =========
-    // GLuint voxelSSBO;
-    // glGenBuffers(1, &voxelSSBO);
-    // loadChunkToSSBO(voxelSSBO, "data.bin");
-
     GLuint masterSSBO;
     glGenBuffers(1, &masterSSBO);
     glBindBuffer(GL_SHADER_STORAGE_BUFFER, masterSSBO);
     glBufferData(GL_SHADER_STORAGE_BUFFER, TOTAL_VOXELS * sizeof(uint32_t), nullptr, GL_DYNAMIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, masterSSBO);
 
-    // load all chunks to master SSBO ===== currently data.bin as debug
-    for (int z = 0; z < WORLD_DIM.z; ++z)
-    for (int y = 0; y < WORLD_DIM.y; ++y)
-    for (int x = 0; x < WORLD_DIM.x; ++x) {
-        int chunkIndex = z * WORLD_DIM.y * WORLD_DIM.x + y * WORLD_DIM.x + x;
-    
-        // pick a random file between 1 and 35
-        // int randomFileId = distrib(gen);
-        // int randomFileId = (x+y*WORLD_DIM.x+z*WORLD_DIM.y*WORLD_DIM.x)%35 + 1;
-        // std::string filename = "../data/data-" + std::to_string(randomFileId) + ".bin";
-        // loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
-        // std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\tdata-"<<randomFileId<< std::endl;
-        
 
-        std::string filename = "../data/chunk-" + std::to_string(x) + "-" + std::to_string(y) + "-" + std::to_string(z) + ".bin";
-        loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
-        std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\t"<<filename<< std::endl;
+    bool LoadFromFile = false;
 
+    if(LoadFromFile) {
+        // load all chunks to master SSBO ===== currently data.bin as debug
+        for (int z = 0; z < WORLD_DIM.z; ++z)
+        for (int y = 0; y < WORLD_DIM.y; ++y)
+        for (int x = 0; x < WORLD_DIM.x; ++x) {
+            int chunkIndex = z * WORLD_DIM.y * WORLD_DIM.x + y * WORLD_DIM.x + x;
+            std::string filename = "../data/chunk-" + std::to_string(x) + "-" + std::to_string(y) + "-" + std::to_string(z) + ".bin";
+            loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
+            // std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\t"<<filename<< std::endl;
+        }
+    } else {
+        GLuint computeShader = compileComputeShader("shaders/voxel.glsl");
+        glUseProgram(computeShader);
+        glUniform3i(glGetUniformLocation(computeShader, "worldDim"), WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
+        glUniform1i(glGetUniformLocation(computeShader, "chunkSize"), CHUNK_SIZE);
 
+        // Now dispatch all chunks at once
+        glDispatchCompute(WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
-
+        
     std::cout << " Voxel SSBO has been allocated and loaded" << std::endl;
 
     // =========== ! voxel SSBO ============
@@ -284,9 +336,16 @@ int main() {
         if (glfwGetKey(win, GLFW_KEY_A) == GLFW_PRESS) move -= glm::vec3 (right[0], 0, right[2]);
         if (glfwGetKey(win, GLFW_KEY_D) == GLFW_PRESS) move += glm::vec3 (right[0], 0, right[2]);
         if (glfwGetKey(win, GLFW_KEY_E) == GLFW_PRESS) move += glm::vec3 (0, 1, 0);
-        if (glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed_multiplier = 3.5f;
+        if (glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) speed_multiplier = 7.0f;
         if (glfwGetKey(win, GLFW_KEY_Q) == GLFW_PRESS) move -= glm::vec3 (0, 1, 0);
         if (glm::length(move) > 0) camPos += glm::normalize(move) * cam_speed * dt * speed_multiplier;
+
+        if (glfwGetKey(win, GLFW_KEY_UP) == GLFW_PRESS){ 
+            RENDER_DEBUG = 0;
+        }
+        if (glfwGetKey(win, GLFW_KEY_DOWN) == GLFW_PRESS){ 
+            RENDER_DEBUG = 1;
+        }
 
         if (glfwGetKey(win, GLFW_KEY_ESCAPE) == GLFW_PRESS) return 0; // quit
 
@@ -303,6 +362,7 @@ int main() {
         glUniform2f(locRes, WIDTH, HEIGHT);
         glUniform3f(locCamPos, camPos.x, camPos.y, camPos.z);
         glUniform3f(locCamRot, camRot.x, camRot.y, 0.0);
+        glUniform1i(RENDER_DEBUGLoc, RENDER_DEBUG);
         glUniform1f(locFOV, 60.0f);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 

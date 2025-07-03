@@ -10,7 +10,7 @@ uniform float FOV;
 uniform int chunkSize;
 uniform ivec3 worldDim;
 
-
+uniform int RENDER_DEBUG;
 
 struct Voxel {
     uint material;
@@ -21,8 +21,8 @@ layout(std430, binding = 0) buffer VoxelData {
 };
 
 const ivec3 CHUNK_SIZE = ivec3(32, 32, 32);
-const float MAX_DIST = 1000.0;
-const int MAX_STEPS = 3000;
+const float MAX_DIST = 10000.0;
+const int MAX_STEPS = 1024;
 
 
 
@@ -34,19 +34,13 @@ struct Material {
 
 
 
-const int NUM_MATERIALS = 10;
+const int NUM_MATERIALS = 4;
 
 const Material voxelMaterials[NUM_MATERIALS] = Material[NUM_MATERIALS](
-    Material(vec3(1.0, 0.0, 0.0), 1.0),   // red
-    Material(vec3(0.0, 0.0, 1.0), 1.0),   // blue
-    Material(vec3(0.0, 1.0, 0.0), 1.0),   // green
-    Material(vec3(1.0, 1.0, 0.0), 1.0),   // yellow
-    Material(vec3(1.0, 0.0, 1.0), 1.0),   // magenta
-    Material(vec3(0.0, 1.0, 1.0), 1.0),   // cyan
-    Material(vec3(1.0, 0.5, 0.0), 1.0),   // orange
-    Material(vec3(0.5, 0.0, 1.0), 1.0),   // purple
-    Material(vec3(0.0, 1.0, 0.5), 1.0),   // teal
-    Material(vec3(0.5, 0.5, 0.5), 1.0)    // gray
+    Material(vec3(0.5, 0.5, 0.5), 1.0),   // stone
+    Material(vec3(0.4, 0.25, 0.1), 1.0),  // dirt
+    Material(vec3(0.055,0.639,0.231), 1.0),    // grass
+    Material(vec3(0.2, 0.4, 1.0), 0.15)    // water
 );
 
 
@@ -143,7 +137,7 @@ bool intersectAABB(vec3 ro, vec3 rd, vec3 boxMin, vec3 boxMax, out float tNear, 
 
 
 // === Beer-Lambert absorption + background composition ===
-bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparency, out uint steps) {
+bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparency, out uint steps, out vec3 impactPosition) {
     vec3 pos = floor(ro);
     float tNear, tFar;
     vec3 boxMin = vec3(0);
@@ -153,6 +147,7 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
         accumulatedColor = vec3(0.0);
         transparency = 1.0;
         steps = 0;
+        impactPosition = pos;
         return false;
     }
 
@@ -187,6 +182,10 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
         if (idx >= 0 && voxels[idx].material != 0u) {
             Material m = getVoxelMaterial(voxels[idx].material);
 
+
+
+
+            // ======================= OPACITY HANDLING ==================================
             float opacity = m.opacity; // absorption coefficient
             vec3 col = m.color;
 
@@ -195,25 +194,35 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
                 accumulatedColor += transparency * col;
                 transparency = 0.0;
                 steps = i;
+                impactPosition = pos;
                 return true;
             }
+
 
             float travel = t - last_t;
             float absorb = exp(-opacity * travel);
 
-            // classic alpha blend
-            accumulatedColor += transparency * col * opacity;
-            transparency *= (1.0 - opacity);
+            // classic alpha blend => DOES NOT WORK,  DO NOT USE
+            // accumulatedColor += transparency * col * opacity;
+            // transparency *= (1.0 - opacity);
+
+            // Opacity exponential remap => walmart Beer-Lambert
+            float localOpacity = 1.0 - pow(1.0 - opacity, travel);
+            accumulatedColor += transparency * col * localOpacity;
+            transparency *= (1.0 - localOpacity);
 
             // Beer-Lambert physically accurate method (costly)
             // accumulatedColor += transparency * col * (1.0 - absorb);
             // transparency *= absorb;
 
-            if (transparency < 0.1) {
+            if (transparency < 0.01) {
                 steps = i;
+                impactPosition = pos;
                 return true;
             }
         }
+        // ======================= !OPACITY HANDLING ==================================
+
 
         if (sideDist.x < sideDist.y && sideDist.x < sideDist.z) {
             pos.x += step.x;
@@ -230,7 +239,8 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
 
         if (t > tFar) {
             steps = i;
-            return true;
+            impactPosition = pos;
+            return true;    
         }
     }
 
@@ -243,8 +253,10 @@ bool raymarch(vec3 ro, vec3 rd, out vec3 accumulatedColor, out float transparenc
 
 
 
-
-
+// hashing function
+float hash(float n) {
+    return fract(sin(n) * 43758.5453123);
+}
 
 
 
@@ -263,17 +275,25 @@ void main() {
     rd = rot * rd;
 
     vec3 color;
+    vec3 impactPosition;
     float transparency;
     uint steps;
-    raymarch(ro, rd, color, transparency, steps);
+    raymarch(ro, rd, color, transparency, steps, impactPosition);
 
     vec3 skyColor = rd.y < 0.0 ? vec3(135, 121, 100) / 255.0 : vec3(103, 159, 201) / 255.0;
 
+    // add a bit of darkening for variation in the same voxel type
+    color -= color * hash( impactPosition.x + impactPosition.x*impactPosition.y + impactPosition.x*impactPosition.y*impactPosition.z )*0.07;
     finalColor = vec4(color + transparency * skyColor, 1.0);
 
 
+
     // This displays the number of steps/max steps
-    finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
+    if (RENDER_DEBUG == 1) {
+        finalColor = vec4(float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, float(steps)/MAX_STEPS, 1.0);
+    }
+
+
 
     // Flattened 3D to 2D, loop through voxels world data. All chunks
     // uint x = uint(gl_FragCoord.x);
