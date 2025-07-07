@@ -22,10 +22,10 @@ const size_t TOTAL_VOXELS = TOTAL_CHUNKS * CHUNK_VOXELS;
 
 
 // Setup random number generator
-// I just randomize the data I load lol
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_int_distribution<> distrib(1, 35); // generates numbers 1..35
+// I just randomize the data I load lol <= I don't do that anymore
+// std::random_device rd;
+// std::mt19937 gen(rd());
+// std::uniform_int_distribution<> distrib(1, 35); // generates numbers 1..35
 
 
 
@@ -126,18 +126,19 @@ struct Voxel {
 };
 
 
-void loadChunkToMasterSSBO(GLuint ssbo, std::string filepath, int chunkIndex) {
-    std::ifstream in(filepath, std::ios::binary);
-    if (!in) throw std::runtime_error("Failed to open chunk file : " + filepath);
+// For loading files, need to redo tha part with OCREE support
+// void loadChunkToMasterSSBO(GLuint ssbo, std::string filepath, int chunkIndex) {
+//     std::ifstream in(filepath, std::ios::binary);
+//     if (!in) throw std::runtime_error("Failed to open chunk file : " + filepath);
 
-    std::vector<uint32_t> data(CHUNK_VOXELS);
-    in.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(uint32_t));
-    in.close();
+//     std::vector<uint32_t> data(CHUNK_VOXELS);
+//     in.read(reinterpret_cast<char*>(data.data()), data.size() * sizeof(uint32_t));
+//     in.close();
 
-    size_t offset = chunkIndex * CHUNK_VOXELS * sizeof(uint32_t);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, data.size() * sizeof(uint32_t), data.data());
-}
+//     size_t offset = chunkIndex * CHUNK_VOXELS * sizeof(uint32_t);
+//     glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+//     glBufferSubData(GL_SHADER_STORAGE_BUFFER, offset, data.size() * sizeof(uint32_t), data.data());
+// }
 
 // ================== ! Voxel struct and values ============
 
@@ -182,7 +183,7 @@ int main() {
     GLint worldDimLoc = glGetUniformLocation(shader, "worldDim");
 
     // Visual debug cycler
-    int RENDER_DEBUG = 1;
+    int RENDER_DEBUG = 0;
     GLint RENDER_DEBUGLoc = glGetUniformLocation(shader, "RENDER_DEBUG");
     glUniform1i(RENDER_DEBUGLoc, RENDER_DEBUG);
 
@@ -196,8 +197,8 @@ int main() {
 
 
 
-    glm::vec3 camPos(0, 1.0f, 3.0f);
-    glm::vec2 camRot(0, 0);
+    glm::vec3 camPos(-58.6984, 123.135, -19.7525);
+    glm::vec2 camRot(0.561, 2.151);
     double lastTime = glfwGetTime();
 
     // Mouse stuff
@@ -213,37 +214,64 @@ int main() {
 
 
     // ======= voxel SSBO =========
-    GLuint masterSSBO;
-    glGenBuffers(1, &masterSSBO);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, masterSSBO);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, TOTAL_VOXELS * sizeof(uint32_t), nullptr, GL_DYNAMIC_DRAW);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, masterSSBO);
+    GLuint voxelSSBO, octreeSSBO;
 
+    // ===== Allocate voxel buffer =====
+    glGenBuffers(1, &voxelSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, voxelSSBO);
+    
+    size_t per_chunk_raw_size = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE * sizeof(uint32_t);
+    size_t total_voxel_size = TOTAL_CHUNKS * per_chunk_raw_size;
+    
+    glBufferData(GL_SHADER_STORAGE_BUFFER, total_voxel_size, nullptr, GL_DYNAMIC_DRAW);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, voxelSSBO);
+    
+    
+    // ===== Allocate octree buffer =====
+    glGenBuffers(1, &octreeSSBO);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, octreeSSBO);
+    
+    int levels = (int)std::log2(CHUNK_SIZE);
+    size_t octree_nodes_per_chunk = (std::pow(8, levels + 1) - 1) / 7;
+    size_t per_chunk_octree_size = octree_nodes_per_chunk * sizeof(uint32_t);    
+    size_t total_octree_size = TOTAL_CHUNKS * per_chunk_octree_size;
 
+    glBufferData(GL_SHADER_STORAGE_BUFFER, total_octree_size, nullptr, GL_DYNAMIC_DRAW);
+    
     bool LoadFromFile = false;
-
-    if(LoadFromFile) {
-        // load all chunks to master SSBO ===== currently data.bin as debug
-        for (int z = 0; z < WORLD_DIM.z; ++z)
-        for (int y = 0; y < WORLD_DIM.y; ++y)
-        for (int x = 0; x < WORLD_DIM.x; ++x) {
-            int chunkIndex = z * WORLD_DIM.y * WORLD_DIM.x + y * WORLD_DIM.x + x;
-            std::string filename = "../data/chunk-" + std::to_string(x) + "-" + std::to_string(y) + "-" + std::to_string(z) + ".bin";
-            loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
-            // std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\t"<<filename<< std::endl;
-        }
+    // ===== Voxel creation =====
+    if (LoadFromFile) {
+        throw std::invalid_argument("Loading from file not implemented since sw");
+        // // load all chunks to master SSBO ===== currently data.bin as debug
+        // for (int z = 0; z < WORLD_DIM.z; ++z)
+        // for (int y = 0; y < WORLD_DIM.y; ++y)
+        // for (int x = 0; x < WORLD_DIM.x; ++x) {
+        //     int chunkIndex = z * WORLD_DIM.y * WORLD_DIM.x + y * WORLD_DIM.x + x;
+        //     std::string filename = "../data/chunk-" + std::to_string(x) + "-" + std::to_string(y) + "-" + std::to_string(z) + ".bin";
+        //     loadChunkToMasterSSBO(masterSSBO, filename, chunkIndex);
+        //     // std::cout << " Loaded \t"<<x<<",\t"<<y<<",\t"<<z << "\t"<<filename<< std::endl;
     } else {
-        GLuint computeShader = compileComputeShader("shaders/voxel.glsl");
-        glUseProgram(computeShader);
-        glUniform3i(glGetUniformLocation(computeShader, "worldDim"), WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
-        glUniform1i(glGetUniformLocation(computeShader, "chunkSize"), CHUNK_SIZE);
-
-        // Now dispatch all chunks at once
+        GLuint voxelComputeShader = compileComputeShader("shaders/voxel.glsl");
+        glUseProgram(voxelComputeShader);
+        glUniform3i(glGetUniformLocation(voxelComputeShader, "worldDim"), WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
+        glUniform1i(glGetUniformLocation(voxelComputeShader, "chunkSize"), CHUNK_SIZE);
+    
+        glDispatchCompute(WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    
+    
+        GLuint octreeComputeShader = compileComputeShader("shaders/build_octree.glsl");
+        glUseProgram(octreeComputeShader);
+        glUniform3i(glGetUniformLocation(octreeComputeShader, "worldDim"), WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
+        glUniform1i(glGetUniformLocation(octreeComputeShader, "chunkSize"), CHUNK_SIZE);
+    
         glDispatchCompute(WORLD_DIM.x, WORLD_DIM.y, WORLD_DIM.z);
         glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
     }
-        
-    std::cout << " Voxel SSBO has been allocated and loaded" << std::endl;
+    
+    std::cout << "Voxel buffer size:   " << total_voxel_size << " bytes" << std::endl;
+    std::cout << "Octree buffer size:  " << total_octree_size << " bytes" << std::endl;
+    
 
     // =========== ! voxel SSBO ============
 
